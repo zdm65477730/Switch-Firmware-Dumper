@@ -1,12 +1,5 @@
 #include <string>
-//#include <fstream>
-//#include <vector>
 #include <switch.h>
-//#include <sys/stat.h>
-//#include <stdio.h>      // ::rename
-//#include <stdlib.h>     // ::exit, EXIT_FAILURE
-//#include <iostream>
-//#include <cstdio>
 #include <experimental/filesystem>
 #include <dirent.h>
 
@@ -14,9 +7,6 @@
 #include "dir.h"
 #include "cons.h"
 #include "dump.h"
-
-//using namespace std;
-//namespace fs = std::experimental::filesystem;
 
 /*
 //https://github.com/J-D-K/JKSV
@@ -49,31 +39,25 @@ $ = Light pink (BGR-e266ff)
 @ = Purple (BGR-ff0059)
 */
 
-console infoCons(28);
-font* sysFont, * consFont;
-const char* ctrlStr = "&\ue0e0 Dump Firmware&   $\ue0e3 Delete Pending Update$   ^\ue0e4+\ue0e5 Delete Dumped Firmware^   %\ue0ef Exit%";
+console infoCons(20);
+font *sysFont, *consFont;
+const char* ctrlStr = "&\ue0e0 转储系统固件&   $\ue0e3 删除挂起的更新$   ^\ue0e4+\ue0e5 删除已转储固件^   %\ue0ef 退出%";
 
 tex* top = texCreate(1280, 88);
 tex* bot = texCreate(1280, 72);
 
-int main(int argc, char* argv[])
-{
+int main(int argc, char* argv[]) {
 	bool dumped;
-	
 	DIR* dir = opendir("sdmc:/Dumped-Firmware");
-	if (dir)
-		{
-			dumped = true;
-		}
-	else
-		{
-			dumped = false;
-		}
+	if (dir) {
+		dumped = true;
+	} else {
+		dumped = false;
+	}
 	closedir(dir);
 
 	graphicsInit(1280, 720);
 	hidInitialize();
-	romfsInit();
 
 	// Configure our supported input layout: a single player with standard controller styles
 	padConfigureInput(1, HidNpadStyleSet_NpadStandard);
@@ -82,11 +66,10 @@ int main(int argc, char* argv[])
 	padInitializeDefault(&pad);
 
 	sysFont = fontLoadSharedFonts();
-	consFont = fontLoadTTF("romfs:/clacon.ttf");
 
 	//Top
 	texClearColor(top, clrCreateU32(0xFF2D2D2D));
-	drawText("Switch Firmware Dumper (Modded by MrDude)", top, sysFont, 56, 38, 24, clrCreateU32(0xFFFFFFFF));
+	drawText("NS固件转储", top, sysFont, 56, 38, 24, clrCreateU32(0xFFFFFFFF));
 	drawRect(top, 30, 87, 1220, 1, clrCreateU32(0xffe5e5e5));
 
 	//Bot
@@ -95,13 +78,13 @@ int main(int argc, char* argv[])
 	unsigned ctrlX = 56;
 	drawText(ctrlStr, bot, sysFont, ctrlX, 24, 18, clrCreateU32(0xFFFFFFFF));
 
-	infoCons.out("Press &A& to Dump your current firmware to your Micro SD Card Dumped-Firmware folder");
+	infoCons.out("按&\ue0e0&将当前固件转储到SD卡的Dumped-Firmware文件夹");
 	infoCons.nl();
-	infoCons.out("Press $Y$ to Delete a pending firmware update from your nand");
+	infoCons.out("按$\ue0e3$从NAND中删除挂起的固件更新");
 	infoCons.nl();
-	infoCons.out("Press ^L+R^ to Erase dumped firmware from your Micro SD Card");
+	infoCons.out("按^\ue0e4+\ue0e5^从SD卡中删除转储的固件");
 	infoCons.nl();
-	infoCons.out("Press %Plus% to Exit this application");
+	infoCons.out("按%\ue0ef%退出此应用程序");
 	infoCons.nl();
 
 	//Thread stuff so UI can update ithout feezing.
@@ -111,88 +94,61 @@ int main(int argc, char* argv[])
 	bool threadFin = true;
 	bool run = true;
 
-	while (run)
-	{
-
+	while (run) {
 		// Scan the gamepad. This should be done once for each frame
 		padUpdate(&pad);
 		// padGetButtonsDown returns the set of buttons that have been newly pressed in this frame compared to the previous one
 		u64 kDown = padGetButtonsDown(&pad);		
 		// padGetButtons returns the set of buttons that are currently pressed
-    u64 kHeld = padGetButtons(&pad);
+		u64 kHeld = padGetButtons(&pad);
 
-		if (!threadRunning)
-		{
-			if (kDown & HidNpadButton_A)
-			{
+		if (!threadRunning) {
+			if (kDown & HidNpadButton_A) {
 				infoCons.clear();
-				
 				DIR* dir = opendir("sdmc:/Dumped-Firmware");
-				if (dir)
-					{
-						dumped = true;
-					}
-				else
-					{
-						dumped = false;
-					}
-				
+				if (dir) {
+					dumped = true;
+				} else {
+					dumped = false;
+				}
 				closedir(dir);
-
-				if (!dumped)
-				{
+				if (!dumped) {
 					threadRunning = true, threadFin = false;
-
 					//Struct to send and receive stuff from thread
 					da = dumpArgsCreate(&infoCons, &threadFin);
 					threadCreate(&workThread, dumpThread, da, NULL, 0x4000, 0x2B, -2);
 					threadStart(&workThread);
-				}
-
-				else
-				{
+				} else {
 					threadFin = true;
 					threadRunning = false;
 					infoCons.clear();
-					infoCons.out("Dumped firmware is present on the Micro SD Card, Press ^L+R^ to remove the current dump!");
+					infoCons.out("SD卡上存在转储的固件，请按^\ue0e4+\ue0e5^删除当前转储的固件！");
 					infoCons.nl();
 				}
 			}
 			
-			if ((kHeld & HidNpadButton_L) && ( kHeld & HidNpadButton_R))
-			{
+			if ((kHeld & HidNpadButton_L) && ( kHeld & HidNpadButton_R)) {
 				infoCons.clear();
-				
 				DIR* dir = opendir("sdmc:/Dumped-Firmware");
-				if (dir)
-					{
-						dumped = true;
-					}
-				else
-					{
-						dumped = false;
-					}
-				
+				if (dir) {
+					dumped = true;
+				} else {
+					dumped = false;
+				}
 				closedir(dir);
-
-				if (dumped)
-				{
+				if (dumped) {
 					threadRunning = true, threadFin = false;
 					da = dumpArgsCreate(&infoCons, &threadFin);
 					threadCreate(&workThread, cleanThread, da, NULL, 0x4000, 0x2B, -2);
 					threadStart(&workThread);
-				}
-
-				else
-				{
+				} else {
 					infoCons.clear();
-					infoCons.out("Dumped firmware ^isn't^ present on the Micro SD Card.");
+					infoCons.out("SD卡上^不^存在转储的固件。");
 					infoCons.nl();
 				}
 			}
-			
-			if (kDown & HidNpadButton_Y)
-			{
+
+			if (kDown & HidNpadButton_Y) {
 				infoCons.clear();			
 				threadRunning = true, threadFin = false;
 				da = dumpArgsCreate(&infoCons, &threadFin);
@@ -200,17 +156,12 @@ int main(int argc, char* argv[])
 				threadStart(&workThread);
 			}
 
-			if (kDown & HidNpadButton_Plus)
-			{
+			if (kDown & HidNpadButton_Plus) {
 				run = false;
 				break;
 			}
-		}
-
-		else
-		{
-			if (threadFin)
-			{
+		} else {
+			if (threadFin) {
 				//threadFin = true;
 				threadClose(&workThread);
 				dumpArgsDestroy(da);
@@ -222,14 +173,12 @@ int main(int argc, char* argv[])
 		texClearColor(frameBuffer, clrCreateU32(0xFF2D2D2D));
 		texDrawNoAlpha(top, frameBuffer, 0, 0);
 		texDrawNoAlpha(bot, frameBuffer, 0, 648);
-		infoCons.draw(consFont);
+		infoCons.draw(sysFont);
 		gfxEndFrame();
 	}
 
 	hidExit();
-	romfsExit();
 	fontDestroy(sysFont);
-	fontDestroy(consFont);
 	texDestroy(top);
 	texDestroy(bot);
 	graphicsExit();

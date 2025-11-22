@@ -36,10 +36,10 @@ SOURCES		:=	src
 #DATA		:=	data
 INCLUDES	:=	inc
 EXEFS_SRC	:=	exefs_src
-APP_TITLE   :=  Big (Firmware) Dumper Mod
+APP_TITLE   :=  Firmware Dumper
 APP_AUTHOR  :=  J-D-K (Modded By MrDude)
 APP_VERSION :=  1.0.0
-ROMFS	    :=	romfs
+#ROMFS	    :=	romfs
 
 #---------------------------------------------------------------------------------
 # options for code generation
@@ -49,14 +49,14 @@ ARCH	:=	-march=armv8-a -mtune=cortex-a57 -mtp=soft -fPIE
 override CFLAGS	+=	-g -Wall -O2 -ffunction-sections \
 			$(ARCH) $(DEFINES)
 
-override CFLAGS	+=	$(INCLUDE) -D__SWITCH__ `freetype-config --cflags`
+override CFLAGS	+=	$(INCLUDE) -I$(PORTLIBS)/include/freetype2 -D__SWITCH__
 
-CXXFLAGS:= $(CFLAGS) -fno-rtti -fno-exceptions -std=gnu++14
+CXXFLAGS:= $(CFLAGS) -fno-rtti -fno-exceptions -std=gnu++20
 
 ASFLAGS	:=	-g $(ARCH)
 LDFLAGS	=	-specs=$(DEVKITPRO)/libnx/switch.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
 
-LIBS	:= `freetype-config --libs` -lpng -ljpeg -lnx -lstdc++fs
+LIBS	:= -lfreetype -lharfbuzz -lbz2 -lz -lnx -lpng -ljpeg -lnx -lstdc++fs
 
 #---------------------------------------------------------------------------------
 # list of directories containing libraries, this must be the top level containing
